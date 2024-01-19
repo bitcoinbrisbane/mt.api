@@ -1,21 +1,33 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
+	// "net/http"
 	"net/http"
+
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	// "go.mongodb.org/mongo-driver/bson/primitive"
 	// "errors"
 )
 
 // import "go.mongodb.org/mongo-driver/bson/primitive"
 
-// type User struct {
-//     ID           primitive.ObjectID `bson:"_id,omitempty"`
-//     Email        string             `bson:"email,omitempty"`
-//     PreferredName string            `bson:"preferredName,omitempty"`
-// }
+type user struct {
+    ID           int				`json:"id"`
+    Email        string             `json:"email"`
+    PreferredName string            `json:"preferredName"`
+}
+
+var users = []user {
+	{ID: 1, Email: "test@example.com", PreferredName: "Test"},
+}
+
+func getUsers(c *gin.Context) {
+	c.IndentedJSON(http.StatusOK, users)
+}
 
 func main() {
-	fmt.Println("Hello, World!")
+	router := gin.Default()
+	router.GET("/users", getUsers)
+	router.Run("localhost:8080")
 }
