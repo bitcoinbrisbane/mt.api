@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "fmt"
+	"fmt"
 	// "net/http"
 	"context"
 	"log"
@@ -15,6 +15,17 @@ import (
 	// "errors"
 )
 
+func connectDB() *mongo.Collection {
+	clientOptions := options.Client().ApplyURI("mongodb://root:example@localhost:27017")
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	collection := client.Database("example").Collection("men")
+	return collection
+}
+
 type MensTableWorker struct {
 	client *mongo.Client
 }
@@ -23,63 +34,84 @@ func NewMensTableWorker(client *mongo.Client) *MensTableWorker {
 	return &MensTableWorker{client: client}
 }
 
-type table struct {
-	ID          int					`json:"id"`
-	Name        string            	`json:"name"`
-	City	 	string				`json:"city"`
+type Table struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	City string `json:"city"`
 }
 
-type man struct {
-    ID           int				`json:"id"`
-    Email        string             `json:"email"`
-    PreferredName string            `json:"preferredName"`
+type Man struct {
+	ID            int    `json:"id"`
+	Email         string `json:"email"`
+	PreferredName string `json:"preferredName"`
+	TableID       int    `json:"tableID"`
 }
 
-type event struct {
-	ID           int				`json:"id"`
-	Name         string             `json:"name"`
-	Location     string             `json:"location"`
-	StartTime    string             `json:"startTime"`
-	TableID	 	 int				`json:"tableID"`
+type Event struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Location  string `json:"location"`
+	StartTime string `json:"startTime"`
+	TableID   int    `json:"tableID"`
 }
 
-var men = []man {
-	{ID: 1, Email: "test@example.com", PreferredName: "Test"},
+var men = []Man{
+}
+
+var tables = []Table{
+	{ID: 1, Name: "Table 1", City: "City 1"},
 }
 
 func getTables(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, men)
+	c.IndentedJSON(http.StatusOK, tables)
 }
 
-func getMen(c *gin.Context) {
+func addMan(c *gin.Context) {
+    var man Man
 
-	collection := ConnectDB()
-
-	cursor, err := collection.Find(context.TODO(), bson.M{})
-    if err != nil {
+    // Decode the request body into the user struct
+    if err := c.BindJSON(&man); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
-    defer cursor.Close(context.TODO())
+	collection := connectDB()
 
-	c.IndentedJSON(http.StatusOK, men)
-}
-
-func ConnectDB() *mongo.Collection {
-    clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-    client, err := mongo.Connect(context.TODO(), clientOptions)
+    // Insert the user into the database
+    result, err := collection.InsertOne(c, man)
     if err != nil {
-        log.Fatal(err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
     }
 
-    collection := client.Database("your_db_name").Collection("users")
-    return collection
+    // Return the ID of the inserted document
+    c.JSON(http.StatusOK, gin.H{"id": result.InsertedID})
+}
+
+func getMen(c *gin.Context) {
+	collection := connectDB()
+
+	cursor, err := collection.Find(context.TODO(), bson.M{})
+	if err != nil {
+		return
+	}
+
+	for cursor.Next(context.TODO()) {
+		var man Man
+		cursor.Decode(&man)
+		men = append(men, man)
+	}
+
+	defer cursor.Close(context.TODO())
+
+	c.IndentedJSON(http.StatusOK, men)
 }
 
 func main() {
 	router := gin.Default()
 
 	router.GET("/men", getMen)
+	router.POST("/men", addMan)
 	router.GET("/tables", getTables)
 	router.Run("localhost:8080")
 }
