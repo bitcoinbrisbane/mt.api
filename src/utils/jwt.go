@@ -2,7 +2,7 @@ package utils
 
 import (
 	"os"
-	"time"
+	// "time"
 
 	"example.com/mt/src/models"
 	"github.com/golang-jwt/jwt"
@@ -10,12 +10,12 @@ import (
 
 // GenerateToken generates a new JWT token for a given username
 func GenerateToken(email string) (string, error) {
-	expirationTime := time.Now().Add(12 * time.Hour)
+	// expirationTime := time.Now().Add(12 * time.Hour)
 	claims := &models.JWTClaims{
 		Username: email,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-		},
+		// StandardClaims: jwt.StandardClaims{
+		// 	ExpiresAt: expirationTime.Unix(),
+		// },
 	}
 
 	var jwtSecret = os.Getenv("JWT_SECRET")
